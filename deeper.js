@@ -107,10 +107,18 @@ async function main() {
       ),
     )
     if (answer.toLowerCase().startsWith("y")) {
-      console.log(chalk.green(`Stashing changes and updating ${dep}`))
+      const stashName = `deeper-stash-${timestamp}`
+      console.log(
+        chalk.green(`Stashing changes to "${stashName}" and updating ${dep}`),
+      )
+      console.log(
+        chalk.gray(
+          `Restore previous changes with 'git stash apply "${stashName}"'`,
+        ),
+      )
       const timestamp = moment().format("YYYY-MM-DD-hh-mm")
       child_process.execSync(
-        `cd ${gitPath} && git stash save "deeper-stash-${timestamp}" && git pull`,
+        `cd ${gitPath} && git stash save "${stashName}" && git pull`,
       )
     }
     rl.close()

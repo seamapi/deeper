@@ -6,6 +6,14 @@ Deeper is a command-line utility for managing your npm dependencies more intimat
 
 This is great for multi-repo development where you might want to quickly edit and PR for a dependency.
 
+## Installation
+
+`deeper` should be installed as a global dependency
+
+```bash
+npm install -g @seveibar/deeper
+```
+
 ## Usage
 
 Deeper is invoked from the command line as follows:
@@ -18,3 +26,6 @@ Replace `<npm-dependency>` with the name of the dependency you want to replace w
 
 If a git repository for the dependency already exists in `~/.deeper/<npm-dependency>`, you will be asked if you want to update it and discard any local changes. The default answer is 'no'. If you choose to discard changes, they will be saved in a branch named `deeper-stash-<timestamp>`.
 
+### Cleaning Up
+
+Running `npm install` will remove all deeper repositories. Alternatively, you can run `deeper clean`.
