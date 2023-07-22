@@ -31,9 +31,13 @@ if (!fs.existsSync(pkgPath)) {
 
 const pkg = require(pkgPath);
 
-if (!pkg.repository || !pkg.repository.url) {
+if (!pkg.repository) {
     console.log(chalk.red(`Could not find repository url for ${dep}`));
     process.exit(1);
+}
+
+if (typeof pkg.repository === 'string') {
+    pkg.repository = { url: pkg.repository };
 }
 
 console.log(chalk.green(`Found repository url for ${dep}: ${pkg.repository.url}`));
