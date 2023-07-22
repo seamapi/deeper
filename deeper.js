@@ -21,6 +21,7 @@ async function main() {
 
   const dep = argv._[0]
 
+  // TODO remove "clean", it's the same as "npm install" basically
   if (dep === "clean") {
     console.log(
       chalk.green(`Cleaning out all cloned deeper packages in node_modules...`),
