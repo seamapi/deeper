@@ -9,6 +9,18 @@ const cwd = process.cwd()
 const readline = require("readline")
 const rimraf = require("rimraf")
 
+function addToGitignore(file) {
+  const gitignorePath = path.join(cwd, ".gitignore")
+  if (fs.existsSync(gitignorePath)) {
+    const gitignore = fs.readFileSync(gitignorePath, "utf8")
+    if (!gitignore.includes(file)) {
+      fs.appendFileSync(gitignorePath, `\n${file}`)
+    }
+  } else {
+    fs.writeFileSync(gitignorePath, `${file}\n`)
+  }
+}
+
 async function main() {
   const chalk = (await import("chalk")).default
   const argv = yargs(hideBin(process.argv))
@@ -19,6 +31,9 @@ async function main() {
     .command("clean", "clean out all cloned deeper packages in node_modules")
     .help().argv
 
+  const deeperDir = path.join(cwd, ".deeper")
+  const nodeModulesDir = path.join(cwd, "node_modules")
+
   const dep = argv._[0]
 
   // TODO remove "clean", it's the same as "npm install" basically
@@ -26,8 +41,6 @@ async function main() {
     console.log(
       chalk.green(`Cleaning out all cloned deeper packages in node_modules...`),
     )
-    const nodeModulesDir = path.join(cwd, "node_modules")
-    const deeperDir = path.join(process.env.HOME, ".deeper")
 
     let foundAtleastOne = false
     fs.readdirSync(nodeModulesDir).forEach((file) => {
@@ -61,9 +74,12 @@ async function main() {
     process.exit(1)
   }
 
-  const nodeModulesPath = path.join(cwd, "node_modules", dep)
-  const pkgPath = path.join(nodeModulesPath, "package.json")
-  const gitPath = path.join(process.env.HOME, ".deeper", dep)
+  // Make sure .deeper is inside .gitignore
+  addToGitignore(".deeper")
+
+  const nodeModulePath = path.join(nodeModulesDir, dep)
+  const pkgPath = path.join(nodeModulePath, "package.json")
+  const gitPath = path.join(deeperDir, dep)
 
   if (!fs.existsSync(pkgPath)) {
     console.log(chalk.red(`Could not find ${dep} in node_modules`))
@@ -133,10 +149,10 @@ async function main() {
   }
 
   console.log(
-    chalk.green(`Creating symlink from ${nodeModulesPath} to ${gitPath}`),
+    chalk.green(`Creating symlink from ${nodeModulePath} to ${gitPath}`),
   )
-  rimraf.sync(nodeModulesPath)
-  fs.symlinkSync(gitPath, nodeModulesPath, "dir")
+  rimraf.sync(nodeModulePath)
+  fs.symlinkSync(gitPath, nodeModulePath, "dir")
 
   console.log(chalk.green(`Done!`))
 }
