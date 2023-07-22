@@ -85,7 +85,7 @@ async function main() {
 
   // If the repository url is just "<org>/<repo>", make it a proper github url
   if (!gitUrl.includes("://")) {
-    gitUrl = `https://github.com/${gitUrl}`
+    gitUrl = `git@github.com:${gitUrl}`
   }
 
   console.log(chalk.green(`Found repository url for ${dep}: ${gitUrl}`))
