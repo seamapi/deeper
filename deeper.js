@@ -142,7 +142,7 @@ async function main() {
       const deeperPackageJson = path.join(deeperPackageDir, "package.json")
 
       if (fs.existsSync(deeperPackageJson)) {
-        if (!syncList.includes(deeperPackageDir)) {
+        if (!syncList.includes(file)) {
           console.log(chalk.gray(`Skipping ${file} (not in synclist)`))
           continue
         }
@@ -255,9 +255,9 @@ async function main() {
           `Restore previous changes with 'git stash apply "${stashName}"'`,
         ),
       )
-      child_process.execSync(
-        `cd ${gitPath} && git stash save "${stashName}" && git pull`,
-      )
+      await exec(`cd ${gitPath} && git stash save "${stashName}"`)
+      // TODO get the remote head with: git remote show origin | grep 'HEAD branch'
+      await exec(`cd ${gitPath} && git fetch && git checkout origin/main`)
     }
     rl.close()
   }
