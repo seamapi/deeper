@@ -105,7 +105,9 @@ async function main() {
       const deeperPackageJson = path.join(fileOrDir, "package.json")
       if (!fs.existsSync(deeperPackageJson)) {
         scopedPackageFiles.push(
-          ...fs.readdirSync(fileOrDir).map((p) => path.join(fileOrDir, p)),
+          ...fs
+            .readdirSync(path.join(deeperDir, fileOrDir))
+            .map((p) => path.join(fileOrDir, p)),
         )
       }
     }
