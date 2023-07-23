@@ -180,6 +180,10 @@ async function main() {
     gitUrl = `git@github.com:${gitUrl}`
   }
 
+  if (gitUrl.startsWith("https://github.com")) {
+    gitUrl = gitUrl.replace("https://github.com/", "git@github.com:")
+  }
+
   console.log(chalk.green(`Found repository url for ${dep}: ${gitUrl}`))
 
   if (!fs.existsSync(gitPath)) {
