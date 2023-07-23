@@ -202,41 +202,37 @@ async function main() {
   if (!fs.existsSync(gitPath)) {
     console.log(chalk.green(`Cloning ${gitUrl} to ${gitPath}`))
     child_process.execSync(`git clone ${gitUrl} ${gitPath}`)
+  } else {
+    console.log(
+      chalk.yellow(`Repository for ${dep} already exists at ${gitPath}`),
+    )
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+    const answer = await new Promise((resolve) =>
+      rl.question(
+        `Would you like to update it, stashing old changes? (default: no)\n`,
+        (answer) => resolve(answer),
+      ),
+    )
+    if (answer.toLowerCase().startsWith("y")) {
+      const timestamp = moment().format("YYYY-MM-DD-hh-mm")
+      const stashName = `deeper-stash-${timestamp}`
+      console.log(
+        chalk.green(`Stashing changes to "${stashName}" and updating ${dep}`),
+      )
+      console.log(
+        chalk.gray(
+          `Restore previous changes with 'git stash apply "${stashName}"'`,
+        ),
+      )
+      child_process.execSync(
+        `cd ${gitPath} && git stash save "${stashName}" && git pull`,
+      )
+    }
+    rl.close()
   }
-
-  // It's a bit better to just resync the given package, nobody wants to pull
-  // latest, but if they do this is a good option i guess
-  // else {
-  //   console.log(
-  //     chalk.yellow(`Repository for ${dep} already exists at ${gitPath}`),
-  //   )
-  //   const rl = readline.createInterface({
-  //     input: process.stdin,
-  //     output: process.stdout,
-  //   })
-  //   const answer = await new Promise((resolve) =>
-  //     rl.question(
-  //       `Would you like to update it, stashing old changes? (default: no)\n`,
-  //       (answer) => resolve(answer),
-  //     ),
-  //   )
-  //   if (answer.toLowerCase().startsWith("y")) {
-  //     const timestamp = moment().format("YYYY-MM-DD-hh-mm")
-  //     const stashName = `deeper-stash-${timestamp}`
-  //     console.log(
-  //       chalk.green(`Stashing changes to "${stashName}" and updating ${dep}`),
-  //     )
-  //     console.log(
-  //       chalk.gray(
-  //         `Restore previous changes with 'git stash apply "${stashName}"'`,
-  //       ),
-  //     )
-  //     child_process.execSync(
-  //       `cd ${gitPath} && git stash save "${stashName}" && git pull`,
-  //     )
-  //   }
-  //   rl.close()
-  // }
 
   console.log(chalk.green(`Installing ${dep}`))
   await exec(`cd ${gitPath} && npm install`)
