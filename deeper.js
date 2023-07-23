@@ -100,6 +100,19 @@ async function main() {
     )
 
     const deeperDirFiles = fs.readdirSync(deeperDir)
+    const scopedPackageFiles = []
+    for (const file of deeperDirFiles) {
+      const deeperPackageJson = path.join(deeperPackageDir, "package.json")
+      if (!fs.existsSync(deeperPackageJson)) {
+        scopedPackageFiles.push(
+          ...fs
+            .readdirSync(deeperPackageDir)
+            .map((p) => path.join(deeperPackageDir, p)),
+        )
+      }
+    }
+    deeperDirFiles.push(...scopedPackageFiles)
+
     for (const file of deeperDirFiles) {
       const deeperPackageDir = path.join(deeperDir, file)
       const deeperPackageJson = path.join(deeperPackageDir, "package.json")
