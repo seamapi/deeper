@@ -9,6 +9,12 @@ const cwd = process.cwd()
 const readline = require("readline")
 const rimraf = require("rimraf")
 
+async function exec(...args) {
+  const chalk = (await import("chalk")).default
+  console.log(chalk.gray(`> ${args[0]}`))
+  child_process.execSync(...args)
+}
+
 function addToGitignore(file) {
   const gitignorePath = path.join(cwd, ".gitignore")
   if (fs.existsSync(gitignorePath)) {
@@ -18,6 +24,33 @@ function addToGitignore(file) {
     }
   } else {
     fs.writeFileSync(gitignorePath, `${file}\n`)
+  }
+}
+
+// Function to prompt the user
+function promptUser(prompt) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+
+    rl.question(prompt, (answer) => {
+      rl.close()
+      resolve(answer.toLowerCase() === "y")
+    })
+  })
+}
+
+async function isHuskyInstalled() {
+  try {
+    // Attempt to list the version of husky
+    // If husky is not installed, this command will throw an error
+    await exec("npx --no husky -v", { stdio: "ignore" })
+    return true
+  } catch {
+    // If the command throws an error, husky is not installed
+    return false
   }
 }
 
@@ -34,6 +67,30 @@ async function main() {
 
   const deeperDir = path.join(cwd, ".deeper")
   const nodeModulesDir = path.join(cwd, "node_modules")
+
+  if (!fs.existsSync(deeperDir)) {
+    console.log(
+      chalk.yellow(
+        "No .deeper directory, this may be your first time running deeper in this project",
+      ),
+    )
+    if (!(await isHuskyInstalled())) {
+      if (
+        await promptUser(
+          "Husky is not installed globally. Would you like to make sure this project does not get yalc links accidentally committed and install husky? (y/n) ",
+        )
+      ) {
+        await exec("npx husky install")
+      }
+    }
+    if (!fs.existsSync(path.join(cwd, ".husky"))) {
+      if (await promptUser(`Install the "yalc check" precommit hook?`)) {
+        await exec(`npx husky add .husky/pre-commit "yalc check"`)
+        await exec(`git add .husky/pre-commit`)
+        await exec(`git commit -m "added husky to check for yalc issues"`)
+      }
+    }
+  }
 
   const dep = argv._[0]
 
@@ -53,18 +110,18 @@ async function main() {
         const pkg = require(deeperPackageJson)
 
         console.log(chalk.green(`Installing ${file}`))
-        child_process.execSync(`cd ${deeperPackageDir} && npm install`)
+        await exec(`cd ${deeperPackageDir} && npm install`)
 
         if (pkg.scripts?.build) {
           console.log(chalk.green(`Building ${file}`))
-          child_process.execSync(`cd ${deeperPackageDir} && npm run build`)
+          await exec(`cd ${deeperPackageDir} && npm run build`)
         }
 
         console.log(
           chalk.gray(`Adding the "${file}" to this project via yalc...`),
         )
-        child_process.execSync(`cd ${deeperPackageDir} && yalc publish`)
-        child_process.execSync(`yalc add ${file}`)
+        await exec(`cd ${deeperPackageDir} && yalc publish`)
+        await exec(`yalc add ${file}`)
 
         console.log(chalk.green(`Done syncing ${file}!`))
       }
@@ -165,15 +222,15 @@ async function main() {
   // }
 
   console.log(chalk.green(`Installing ${dep}`))
-  child_process.execSync(`cd ${gitPath} && npm install`)
+  await exec(`cd ${gitPath} && npm install`)
   if (pkg.scripts?.build) {
     console.log(chalk.green(`Building ${dep}`))
-    child_process.execSync(`cd ${gitPath} && npm run build`)
+    await exec(`cd ${gitPath} && npm run build`)
   }
 
   console.log(chalk.gray(`Adding the "${dep}" to this project via yalc...`))
-  child_process.execSync(`cd ${gitPath} && yalc publish`)
-  child_process.execSync(`yalc add ${dep}`)
+  await exec(`cd ${gitPath} && yalc publish`)
+  await exec(`yalc add ${dep}`)
 
   console.log(chalk.green(`Done!`))
 

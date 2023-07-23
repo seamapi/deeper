@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "chalk": "file:.yalc/chalk",
+    "chalk": "^4.1.2",
     "moment": "^2.29.4",
     "rimraf": "^5.0.1",
     "yargs": "^17.7.2"
