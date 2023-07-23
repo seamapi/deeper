@@ -28,6 +28,7 @@ async function main() {
       "<npm-dependency>",
       "replace a package with a symlink to a git repo",
     )
+    .command("sync", "build and sync all packages in .deeper to this project")
     .command("clean", "clean out all cloned deeper packages in node_modules")
     .help().argv
 
@@ -36,29 +37,46 @@ async function main() {
 
   const dep = argv._[0]
 
-  // TODO remove "clean", it's the same as "npm install" basically
-  if (dep === "clean") {
+  if (dep === "sync") {
+    console.log(
+      chalk.green(`Syncing all packages in .deeper to this project...`),
+    )
+
+    const deeperDirFiles = fs.readdirSync(deeperDir)
+    for (const file of deeperDirFiles) {
+      const deeperPackageDir = path.join(deeperDir, file)
+      const deeperPackageJson = path.join(deeperPackageDir, "package.json")
+
+      if (fs.existsSync(deeperPackageJson)) {
+        console.log(chalk.green(`Syncing ${file}`))
+
+        const pkg = require(deeperPackageJson)
+
+        console.log(chalk.green(`Installing ${file}`))
+        child_process.execSync(`cd ${deeperPackageDir} && npm install`)
+
+        if (pkg.scripts?.build) {
+          console.log(chalk.green(`Building ${file}`))
+          child_process.execSync(`cd ${deeperPackageDir} && npm run build`)
+        }
+
+        console.log(
+          chalk.gray(`Adding the "${file}" to this project via yalc...`),
+        )
+        child_process.execSync(`cd ${deeperPackageDir} && yalc publish`)
+        child_process.execSync(`yalc add ${file}`)
+
+        console.log(chalk.green(`Done syncing ${file}!`))
+      }
+    }
+    return
+  } else if (dep === "clean") {
     console.log(
       chalk.green(`Cleaning out all cloned deeper packages in node_modules...`),
     )
 
-    let foundAtleastOne = false
-    fs.readdirSync(nodeModulesDir).forEach((file) => {
-      const filePath = path.join(nodeModulesDir, file)
-      if (fs.lstatSync(filePath).isSymbolicLink()) {
-        const linkTarget = fs.readlinkSync(filePath)
-        if (linkTarget.startsWith(deeperDir)) {
-          console.log(chalk.green(`Removing symlink ${filePath}`))
-          foundAtleastOne = true
-          fs.unlinkSync(filePath)
-        }
-      }
-    })
-
-    if (!foundAtleastOne) {
-      console.log(chalk.yellow(`No deeper packages found in node_modules`))
-      return
-    }
+    child_process.execSync("yalc remove --all")
+    rimraf.sync(deeperDir)
 
     console.log(
       chalk.green(`Running npm install to restore original packages...`),
@@ -74,8 +92,9 @@ async function main() {
     process.exit(1)
   }
 
-  // Make sure .deeper is inside .gitignore
   addToGitignore(".deeper")
+  addToGitignore(".yalc")
+  addToGitignore("yalc.lock")
 
   const nodeModulePath = path.join(nodeModulesDir, dep)
   const pkgPath = path.join(nodeModulePath, "package.json")
@@ -152,9 +171,21 @@ async function main() {
     chalk.green(`Creating symlink from ${nodeModulePath} to ${gitPath}`),
   )
   rimraf.sync(nodeModulePath)
-  fs.symlinkSync(gitPath, nodeModulePath, "dir")
+
+  // Symlinks don't handle peer deps properly, instead we use yalc
+  // fs.symlinkSync(gitPath, nodeModulePath, "dir")
+
+  console.log(chalk.gray(`Adding the "${dep}" to this project via yalc...`))
+  child_process.execSync(`cd ${gitPath} && yalc publish`)
+  child_process.execSync(`yalc add ${dep}`)
 
   console.log(chalk.green(`Done!`))
+
+  console.log(
+    chalk.green(
+      `\nRun "deeper sync" to sync your packages!\nEdit the package in ".deeper/${dep}"\n`,
+    ),
+  )
 }
 
 main()
