@@ -8,6 +8,7 @@ const moment = require("moment")
 const cwd = process.cwd()
 const readline = require("readline")
 const rimraf = require("rimraf")
+const storage = require("node-persist")
 
 async function exec(...args) {
   const chalk = (await import("chalk")).default
@@ -66,6 +67,7 @@ async function main() {
     .help().argv
 
   const deeperDir = path.join(cwd, ".deeper")
+  await storage.init({ dir: path.join(deeperDir, ".config") })
   const nodeModulesDir = path.join(cwd, "node_modules")
 
   if (!fs.existsSync(deeperDir)) {
@@ -90,18 +92,40 @@ async function main() {
         await exec(`git commit -m "added husky to check for yalc issues"`)
       }
     }
+    fs.mkdirSync(deeperDir, { recursive: true })
   }
 
   const dep = argv._[0]
 
+  const syncList = (await storage.getItem("synclist")) ?? []
+
   if (dep === "sync") {
     console.log(
-      chalk.green(`Syncing all packages in .deeper to this project...`),
+      chalk.green(
+        `Syncing ${syncList
+          .map((s) => `.deeper/${s}`)
+          .join(",")} to this project...`,
+      ),
     )
+
+    if (!fs.existsSync(deeperDir)) {
+      console.log(chalk.red("No .deeper directory found"))
+      process.exit(1)
+    }
+
+    if (syncList.length === 0) {
+      console.log(
+        chalk.red(
+          `Sync list is empty (try "deeper <package>" to add to the sync list)`,
+        ),
+      )
+      process.exit(1)
+    }
 
     const deeperDirFiles = fs.readdirSync(deeperDir)
     const scopedPackageFiles = []
     for (const fileOrDir of deeperDirFiles) {
+      if (fileOrDir === ".config") continue
       const deeperPackageJson = path.join(fileOrDir, "package.json")
       if (!fs.existsSync(deeperPackageJson)) {
         scopedPackageFiles.push(
@@ -118,6 +142,10 @@ async function main() {
       const deeperPackageJson = path.join(deeperPackageDir, "package.json")
 
       if (fs.existsSync(deeperPackageJson)) {
+        if (!syncList.includes(deeperPackageDir)) {
+          console.log(chalk.gray(`Skipping ${file} (not in synclist)`))
+          continue
+        }
         console.log(chalk.green(`Syncing ${file}`))
 
         const pkg = require(deeperPackageJson)
@@ -146,7 +174,7 @@ async function main() {
     )
 
     child_process.execSync("yalc remove --all")
-    // rimraf.sync(deeperDir)
+    await storage.removeItem("synclist")
 
     console.log(
       chalk.green(`Running npm install to restore original packages...`),
@@ -244,6 +272,9 @@ async function main() {
   console.log(chalk.gray(`Adding the "${dep}" to this project via yalc...`))
   await exec(`cd ${gitPath} && yalc publish`)
   await exec(`yalc add ${dep}`)
+
+  if (!syncList.includes(dep))
+    await storage.setItem("synclist", [...syncList, dep])
 
   console.log(chalk.green(`Done!`))
 
