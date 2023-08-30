@@ -214,10 +214,10 @@ async function main() {
     pkg.repository = { url: pkg.repository }
   }
 
-  let gitUrl = pkg.repository.url
+  let gitUrl: string = pkg.repository.url
 
   // If the repository url is just "<org>/<repo>", make it a proper github url
-  if (!gitUrl.includes("://") && !gitUrl.includes("git@")) {
+  if (gitUrl.match(/^[^/]+\/[^/]+$/)) {
     gitUrl = `git@github.com:${gitUrl}`
   }
 

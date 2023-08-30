@@ -19,7 +19,7 @@ The typical usage flow is:
 `deeper` and `yalc` should be installed as a global dependency
 
 ```bash
-npm install -g deeper yalc
+npm install -g @seveibar/deeper yalc
 ```
 
 ## Usage
